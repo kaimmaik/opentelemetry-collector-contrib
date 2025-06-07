@@ -92,11 +92,12 @@ func (akr *awsContainerInsightsKueueReceiver) initKueuePrometheusScraper(
 ) error {
 	var err error
 	akr.kueueScraper, err = kueuescraper.NewKueuePrometheusScraper(kueuescraper.KueuePrometheusScraperOpts{
-		Ctx:               ctx,
-		TelemetrySettings: akr.settings,
-		Consumer:          akr.nextConsumer,
-		Host:              host,
-		ClusterName:       akr.config.ClusterName,
+		Ctx:                ctx,
+		TelemetrySettings:  akr.settings,
+		Consumer:           akr.nextConsumer,
+		Host:               host,
+		ClusterName:        akr.config.ClusterName,
+		CollectionInterval: akr.config.CollectionInterval,
 	})
 	return err
 }

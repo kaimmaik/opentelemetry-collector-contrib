@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
+	ci "github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver/internal/mocks"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 )
@@ -70,24 +71,27 @@ func TestNewKueuePrometheusScraperBadInputs(t *testing.T) {
 
 	tests := []KueuePrometheusScraperOpts{
 		{ // case: no consumer
-			Ctx:               context.TODO(),
-			TelemetrySettings: settings,
-			Consumer:          nil,
-			Host:              componenttest.NewNopHost(),
-			ClusterName:       "DummyCluster",
+			Ctx:                context.TODO(),
+			TelemetrySettings:  settings,
+			Consumer:           nil,
+			Host:               componenttest.NewNopHost(),
+			ClusterName:        "DummyCluster",
+			CollectionInterval: ci.DefaultCollectionInterval,
 		},
 		{ // case: no host
-			Ctx:               context.TODO(),
-			TelemetrySettings: settings,
-			Consumer:          mockKueueConsumer{},
-			Host:              nil,
-			ClusterName:       "DummyCluster",
+			Ctx:                context.TODO(),
+			TelemetrySettings:  settings,
+			Consumer:           mockKueueConsumer{},
+			Host:               nil,
+			ClusterName:        "DummyCluster",
+			CollectionInterval: ci.DefaultCollectionInterval,
 		},
 		{ // case: no cluster name
-			Ctx:               context.TODO(),
-			TelemetrySettings: settings,
-			Consumer:          mockKueueConsumer{},
-			Host:              componenttest.NewNopHost(),
+			Ctx:                context.TODO(),
+			TelemetrySettings:  settings,
+			Consumer:           mockKueueConsumer{},
+			Host:               componenttest.NewNopHost(),
+			CollectionInterval: ci.DefaultCollectionInterval,
 		},
 	}
 
@@ -116,11 +120,12 @@ func TestNewKueuePrometheusScraperEndToEnd(t *testing.T) {
 
 	scraper, err := NewKueuePrometheusScraper(
 		KueuePrometheusScraperOpts{
-			Ctx:               context.TODO(),
-			TelemetrySettings: settings,
-			Consumer:          mConsumer,
-			Host:              componenttest.NewNopHost(),
-			ClusterName:       "DummyCluster",
+			Ctx:                context.TODO(),
+			TelemetrySettings:  settings,
+			Consumer:           mConsumer,
+			Host:               componenttest.NewNopHost(),
+			ClusterName:        "DummyCluster",
+			CollectionInterval: ci.DefaultCollectionInterval,
 		},
 	)
 	assert.NoError(t, err)

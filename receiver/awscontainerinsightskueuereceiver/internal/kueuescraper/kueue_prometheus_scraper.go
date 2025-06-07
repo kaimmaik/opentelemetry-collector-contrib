@@ -22,11 +22,11 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
+	ci "github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 )
 
 const (
-	kmCollectionInterval = 60 * time.Second
 	// kmJobName needs to be "containerInsightsKueueMetricsScraper" so metric translator tags the source as the container insights receiver
 	kmJobName                   = "containerInsightsKueueMetricsScraper"
 	kueueNamespace              = "kueue-system"
@@ -66,11 +66,12 @@ type KueuePrometheusScraper struct {
 }
 
 type KueuePrometheusScraperOpts struct {
-	Ctx               context.Context
-	TelemetrySettings component.TelemetrySettings
-	Consumer          consumer.Metrics
-	Host              component.Host
-	ClusterName       string
+	Ctx                context.Context
+	TelemetrySettings  component.TelemetrySettings
+	Consumer           consumer.Metrics
+	Host               component.Host
+	ClusterName        string
+	CollectionInterval time.Duration
 }
 
 func NewKueuePrometheusScraper(opts KueuePrometheusScraperOpts) (*KueuePrometheusScraper, error) {
@@ -83,6 +84,9 @@ func NewKueuePrometheusScraper(opts KueuePrometheusScraperOpts) (*KueuePrometheu
 	if opts.ClusterName == "" {
 		return nil, errors.New("cluster name cannot be empty")
 	}
+	if opts.CollectionInterval <= 0 {
+		opts.CollectionInterval = ci.DefaultCollectionInterval
+	}
 
 	scrapeConfig := &config.ScrapeConfig{
 		HTTPClientConfig: configutil.HTTPClientConfig{
@@ -94,8 +98,8 @@ func NewKueuePrometheusScraper(opts KueuePrometheusScraperOpts) (*KueuePrometheu
 				CredentialsFile: serviceAccountTokenDefaultPath,
 			},
 		},
-		ScrapeInterval:         model.Duration(kmCollectionInterval),
-		ScrapeTimeout:          model.Duration(kmCollectionInterval),
+		ScrapeInterval:         model.Duration(opts.CollectionInterval),
+		ScrapeTimeout:          model.Duration(opts.CollectionInterval),
 		ScrapeProtocols:        config.DefaultScrapeProtocols,
 		ScrapeFallbackProtocol: config.PrometheusText0_0_4,
 		JobName:                kmJobName,

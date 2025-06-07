@@ -210,6 +210,10 @@ const (
 	UnitVCPU        = "vCPU"
 	UnitPercent     = "Percent"
 	TrueValue       = "True"
+
+	// collection interval
+	DefaultCollectionInterval    = 60 * time.Second
+	EFADefaultCollectionInterval = 20 * time.Second
 )
 
 var WaitingReasonLookup = map[string]string{

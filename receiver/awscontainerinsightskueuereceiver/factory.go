@@ -5,11 +5,12 @@ package awscontainerinsightskueuereceiver // import "github.com/open-telemetry/o
 
 import (
 	"context"
-	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
+
+	ci "github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight"
 )
 
 const (
@@ -18,11 +19,8 @@ const (
 
 var receiverType component.Type = component.MustNewType("awscontainerinsightskueuereceiver")
 
-// Factory for awscontainerinsightreceiver
+// Factory for awscontainerinsightskueuereceiver
 const (
-	// Default collection interval. Every 60s the receiver will collect metrics
-	defaultCollectionInterval = 60 * time.Second
-
 	// Rely on EC2 tags to auto-detect cluster name by default
 	defaultClusterName = ""
 )
@@ -38,7 +36,7 @@ func NewFactory() receiver.Factory {
 // createDefaultConfig returns a default config for the receiver.
 func createDefaultConfig() component.Config {
 	return &Config{
-		CollectionInterval: defaultCollectionInterval,
+		CollectionInterval: ci.DefaultCollectionInterval,
 		ClusterName:        defaultClusterName,
 	}
 }

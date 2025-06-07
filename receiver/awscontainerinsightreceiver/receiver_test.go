@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -215,4 +216,22 @@ func TestAWSContainerInsightReceiverStart(t *testing.T) {
 	assert.Error(t, err)
 
 	mockHost.AssertCalled(t, "GetExtensions")
+}
+
+func TestCollectionIntervalConfig(t *testing.T) {
+	config := createDefaultConfig().(*Config)
+	customInterval := 30 * time.Second
+	config.CollectionInterval = customInterval
+
+	receiver, err := newAWSContainerInsightReceiver(
+		component.TelemetrySettings{},
+		config,
+		consumertest.NewNop(),
+	)
+	assert.NoError(t, err)
+
+	awsReceiver, ok := receiver.(*awsContainerInsightReceiver)
+	assert.True(t, ok)
+	assert.Equal(t, customInterval, awsReceiver.config.CollectionInterval,
+		"Custom collection interval should be respected")
 }

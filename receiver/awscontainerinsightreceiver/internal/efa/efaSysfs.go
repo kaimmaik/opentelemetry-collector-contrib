@@ -22,10 +22,6 @@ import (
 )
 
 const (
-	defaultCollectionInterval = 20 * time.Second
-)
-
-const (
 	efaPath            = "/sys/class/infiniband"
 	efaK8sResourceName = "vpc.amazonaws.com/efa"
 
@@ -106,11 +102,14 @@ type efaCounters struct {
 	txBytes            uint64 // hw_counters/tx_bytes
 }
 
-func NewEfaSyfsScraper(logger *zap.Logger, decorator stores.Decorator, podResourcesStore podResourcesStore, hostInfo hostInfoProvider) *Scraper {
+func NewEfaSyfsScraper(logger *zap.Logger, decorator stores.Decorator, podResourcesStore podResourcesStore, hostInfo hostInfoProvider, collectionInterval time.Duration) *Scraper {
 	ctx, cancel := context.WithCancel(context.Background())
 	podResourcesStore.AddResourceName(efaK8sResourceName)
+	if collectionInterval <= 0 {
+		collectionInterval = ci.EFADefaultCollectionInterval
+	}
 	e := &Scraper{
-		collectionInterval: defaultCollectionInterval,
+		collectionInterval: collectionInterval,
 		cancel:             cancel,
 		sysFsReader:        defaultSysFsReader(logger),
 		deltaCalculator:    metrics.NewMetricCalculator(calculateDelta),

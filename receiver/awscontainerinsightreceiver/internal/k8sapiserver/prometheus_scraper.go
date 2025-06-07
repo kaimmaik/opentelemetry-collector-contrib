@@ -22,12 +22,12 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
+	ci "github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 )
 
 const (
-	caFile             = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-	collectionInterval = 60 * time.Second
+	caFile = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 	// needs to start with "containerInsightsKubeAPIServerScraper" for histogram deltas in the emf exporter
 	jobName                        = "containerInsightsKubeAPIServerScraper"
 	serviceAccountTokenDefaultPath = "/var/run/secrets/kubernetes.io/serviceaccount/token" // #nosec
@@ -73,6 +73,7 @@ type PrometheusScraperOpts struct {
 	Host                component.Host
 	ClusterNameProvider clusterNameProvider
 	LeaderElection      *LeaderElection
+	CollectionInterval  time.Duration
 }
 
 func NewPrometheusScraper(opts PrometheusScraperOpts) (*PrometheusScraper, error) {
@@ -88,7 +89,9 @@ func NewPrometheusScraper(opts PrometheusScraperOpts) (*PrometheusScraper, error
 	if opts.ClusterNameProvider == nil {
 		return nil, errors.New("cluster name provider cannot be nil")
 	}
-
+	if opts.CollectionInterval <= 0 {
+		opts.CollectionInterval = ci.DefaultCollectionInterval
+	}
 	controlPlaneMetricsAllowRegex := ""
 	for _, item := range controlPlaneMetricAllowList {
 		controlPlaneMetricsAllowRegex += item + "|"
@@ -106,8 +109,8 @@ func NewPrometheusScraper(opts PrometheusScraperOpts) (*PrometheusScraper, error
 				CredentialsFile: serviceAccountTokenDefaultPath,
 			},
 		},
-		ScrapeInterval:         model.Duration(collectionInterval),
-		ScrapeTimeout:          model.Duration(collectionInterval),
+		ScrapeInterval:         model.Duration(opts.CollectionInterval),
+		ScrapeTimeout:          model.Duration(opts.CollectionInterval),
 		ScrapeProtocols:        config.DefaultScrapeProtocols,
 		ScrapeFallbackProtocol: config.PrometheusText0_0_4,
 		JobName:                fmt.Sprintf("%s/%s", jobName, opts.Endpoint),

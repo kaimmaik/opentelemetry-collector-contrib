@@ -7,10 +7,13 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component/componenttest"
 
+	ci "github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver/internal/prometheusscraper"
 )
 
@@ -132,7 +135,7 @@ func TestNewNeuronScraperEndToEnd(t *testing.T) {
 		TelemetrySettings: componenttest.NewNopTelemetrySettings(),
 		Consumer:          consumer,
 		Host:              componenttest.NewNopHost(),
-		ScraperConfigs:    GetNeuronScrapeConfig(mockHostInfoProvider{}),
+		ScraperConfigs:    GetNeuronScrapeConfig(mockHostInfoProvider{}, -1),
 		HostInfoProvider:  mockHostInfoProvider{},
 	}
 
@@ -246,7 +249,7 @@ func TestNewNeuronScraperWithUltraServersEndToEnd(t *testing.T) {
 		TelemetrySettings: componenttest.NewNopTelemetrySettings(),
 		Consumer:          consumer,
 		Host:              componenttest.NewNopHost(),
-		ScraperConfigs:    GetNeuronScrapeConfig(mockHostInfoProvider{}),
+		ScraperConfigs:    GetNeuronScrapeConfig(mockHostInfoProvider{}, ci.DefaultCollectionInterval),
 		HostInfoProvider:  mockHostInfoProvider{},
 	}
 
@@ -262,4 +265,15 @@ func TestNewNeuronScraperWithUltraServersEndToEnd(t *testing.T) {
 func TestNeuronMonitorScraperJobName(t *testing.T) {
 	// needs to start with containerInsights
 	assert.True(t, strings.HasPrefix(jobName, "containerInsightsNeuronMonitorScraper"))
+}
+
+func TestGetNeuronScrapeConfigWithCollectionInterval(t *testing.T) {
+	// Test with default collection interval
+	config := GetNeuronScrapeConfig(mockHostInfoProvider{}, ci.DefaultCollectionInterval)
+	assert.Equal(t, model.Duration(ci.DefaultCollectionInterval), config.ScrapeInterval)
+
+	// Test with custom collection interval
+	customCollectionInterval := 30 * time.Second
+	customConfig := GetNeuronScrapeConfig(mockHostInfoProvider{}, customCollectionInterval)
+	assert.Equal(t, model.Duration(customCollectionInterval), customConfig.ScrapeInterval)
 }

@@ -250,7 +250,7 @@ var efa1PodContainerMetrics = []expectation{
 var efa1Metrics = []expectation{efa1NodeMetric, efa1PodContainerMetrics[0], efa1PodContainerMetrics[1]}
 
 func TestGetMetrics(t *testing.T) {
-	s := NewEfaSyfsScraper(zap.NewNop(), mockDecorator{}, mockPodResourcesStore{}, mockHost)
+	s := NewEfaSyfsScraper(zap.NewNop(), mockDecorator{}, mockPodResourcesStore{}, mockHost, ci.DefaultCollectionInterval)
 	s.sysFsReader = newMockSysfsReader()
 
 	var expectedMetrics []expectation
@@ -269,7 +269,7 @@ func TestGetMetrics(t *testing.T) {
 }
 
 func TestGetMetricsBeforeSuccessfulScrape(t *testing.T) {
-	s := NewEfaSyfsScraper(zap.NewNop(), mockDecorator{}, mockPodResourcesStore{}, mockHost)
+	s := NewEfaSyfsScraper(zap.NewNop(), mockDecorator{}, mockPodResourcesStore{}, mockHost, ci.DefaultCollectionInterval)
 
 	result := s.GetMetrics()
 	assert.Empty(t, result)
@@ -296,7 +296,7 @@ func (p mockPodResourcesStoreMissingOneDevice) GetContainerInfo(deviceID string,
 }
 
 func TestGetMetricsMissingDeviceFromPodResources(t *testing.T) {
-	s := NewEfaSyfsScraper(zap.NewNop(), mockDecorator{}, mockPodResourcesStoreMissingOneDevice{}, mockHost)
+	s := NewEfaSyfsScraper(zap.NewNop(), mockDecorator{}, mockPodResourcesStoreMissingOneDevice{}, mockHost, ci.DefaultCollectionInterval)
 	s.sysFsReader = newMockSysfsReader()
 
 	assert.NoError(t, s.scrape())
@@ -394,7 +394,7 @@ func findTimestamp(t *testing.T, attrs pcommon.Map) (string, time.Time) {
 }
 
 func TestScrape(t *testing.T) {
-	s := NewEfaSyfsScraper(zap.NewNop(), nil, mockPodResourcesStore{}, mockHost)
+	s := NewEfaSyfsScraper(zap.NewNop(), nil, mockPodResourcesStore{}, mockHost, ci.DefaultCollectionInterval)
 	s.sysFsReader = newMockSysfsReader()
 
 	s.hostInfo = mockHost
@@ -515,7 +515,7 @@ func (r mockSysfsReaderError4) GetMACAddressFromDeviceName(_ efaDeviceName) (str
 
 func TestScrapeErrors(t *testing.T) {
 	for _, reader := range []sysFsReader{mockSysfsReaderError1{}, mockSysfsReaderError2{}, mockSysfsReaderError3{}, mockSysfsReaderError4{}} {
-		s := NewEfaSyfsScraper(zap.NewNop(), nil, mockPodResourcesStore{}, mockHost)
+		s := NewEfaSyfsScraper(zap.NewNop(), nil, mockPodResourcesStore{}, mockHost, ci.EFADefaultCollectionInterval)
 
 		s.sysFsReader = reader
 
@@ -547,10 +547,21 @@ func (r mockSysfsReaderNoEfaData) GetMACAddressFromDeviceName(_ efaDeviceName) (
 }
 
 func TestScrapeNoEfaData(t *testing.T) {
-	s := NewEfaSyfsScraper(zap.NewNop(), nil, mockPodResourcesStore{}, mockHost)
+	s := NewEfaSyfsScraper(zap.NewNop(), nil, mockPodResourcesStore{}, mockHost, ci.EFADefaultCollectionInterval)
 
 	s.sysFsReader = mockSysfsReaderNoEfaData{}
 
 	assert.NoError(t, s.scrape())
 	assert.Nil(t, s.store.devices)
+}
+
+func TestCollectionIntervalHandling(t *testing.T) {
+	// Test with default collection interval
+	s1 := NewEfaSyfsScraper(zap.NewNop(), mockDecorator{}, mockPodResourcesStore{}, mockHost, -1)
+	assert.Equal(t, ci.EFADefaultCollectionInterval, s1.collectionInterval, "When using default AWS Container Insights interval signaled by -1, EFA should use its own default")
+
+	// Test with custom collection interval
+	customCollectionInterval := 30 * time.Second
+	s2 := NewEfaSyfsScraper(zap.NewNop(), mockDecorator{}, mockPodResourcesStore{}, mockHost, customCollectionInterval)
+	assert.Equal(t, customCollectionInterval, s2.collectionInterval)
 }

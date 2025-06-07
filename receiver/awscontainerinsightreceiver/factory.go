@@ -5,20 +5,17 @@ package awscontainerinsightreceiver // import "github.com/open-telemetry/opentel
 
 import (
 	"context"
-	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 
+	ci "github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver/internal/metadata"
 )
 
 // Factory for awscontainerinsightreceiver
 const (
-	// Default collection interval. Every 60s the receiver will collect metrics
-	defaultCollectionInterval = 60 * time.Second
-
 	// Default collector role. Collect all metrics by default
 	defaultCollectionRole = ALL
 
@@ -58,7 +55,7 @@ func NewFactory() receiver.Factory {
 // createDefaultConfig returns a default config for the receiver.
 func createDefaultConfig() component.Config {
 	return &Config{
-		CollectionInterval:          defaultCollectionInterval,
+		CollectionInterval:          ci.DefaultCollectionInterval,
 		ContainerOrchestrator:       defaultContainerOrchestrator,
 		TagService:                  defaultTagService,
 		PrefFullPodName:             defaultPrefFullPodName,
