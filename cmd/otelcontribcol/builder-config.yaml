@@ -240,6 +240,8 @@ receivers:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver v0.124.1
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver v0.124.1
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zookeeperreceiver v0.124.1
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kedareceiver v0.124.1
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/karpenterreceiver v0.124.1
 
 connectors:
   - gomod: go.opentelemetry.io/collector/connector/forwardconnector v0.124.0

@@ -1,0 +1,39 @@
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'keda'
+          scrape_interval: 30s
+          static_configs:
+            - targets: ['keda-operator.keda:8080']
+        - job_name: 'karpenter'
+          scrape_interval: 30s
+          static_configs:
+            - targets: ['localhost:8080']
+
+processors:
+  batch:
+
+exporters:
+  logging:
+    verbosity: detailed
+  awsemf:
+    region: eu-west-1
+    namespace: EKS/CustomMetrics
+    log_group_name: /aws/eks/custom-metrics
+    dimension_rollup_option: NoDimensionRollup
+    metric_declarations:
+      - dimensions: [[metricName]]
+        metric_name_selectors:
+          - keda_scaler_metrics_value
+      - dimensions: [[name]]
+        metric_name_selectors:
+          - karpenter_nodes_total
+          - karpenter_pods_pending
+
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      processors: [batch]
+      exporters: [logging, awsemf]
