@@ -272,3 +272,5 @@ providers:
 # file before passing it to OCB, to ensure that local versions are used for all
 # Contrib modules.
 replaces:
+  - github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kedareceiver => ../../receiver/kedareceiver
+  - github.com/open-telemetry/opentelemetry-collector-contrib/receiver/karpenterreceiver => ../../receiver/karpenterreceiver
