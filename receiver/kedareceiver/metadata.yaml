@@ -1,0 +1,41 @@
+type: keda
+
+status:
+  class: receiver
+  stability:
+    beta: [metrics]
+  distributions: [contrib]
+  codeowners:
+    active: []
+    seeking_new: true
+
+attributes:
+  scaler_name:
+    description: Name of the KEDA scaler
+    type: string
+  scaler_type:
+    description: Type of the KEDA scaler
+    type: string
+  scaled_object_name:
+    description: Name of the scaled object
+    type: string
+  scaled_object_namespace:
+    description: Namespace of the scaled object
+    type: string
+
+metrics:
+  keda_scaler_metrics_value:
+    enabled: true
+    description: The current value of the metric used by KEDA for scaling decisions
+    unit: "1"
+    gauge:
+      value_type: double
+    attributes: [scaler_name, scaler_type, scaled_object_name, scaled_object_namespace]
+  
+  keda_scaler_active:
+    enabled: true
+    description: Whether the scaler is currently active (1) or inactive (0)
+    unit: "1"
+    gauge:
+      value_type: int
+    attributes: [scaler_name, scaler_type, scaled_object_name, scaled_object_namespace]

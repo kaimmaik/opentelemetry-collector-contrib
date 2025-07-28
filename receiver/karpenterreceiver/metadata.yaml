@@ -1,0 +1,52 @@
+type: karpenter
+
+status:
+  class: receiver
+  stability:
+    beta: [metrics]
+  distributions: [contrib]
+  codeowners:
+    active: []
+    seeking_new: true
+
+attributes:
+  node_name:
+    description: Name of the Kubernetes node
+    type: string
+  node_pool:
+    description: Karpenter node pool name
+    type: string
+  instance_type:
+    description: EC2 instance type
+    type: string
+  zone:
+    description: Availability zone
+    type: string
+  capacity_type:
+    description: Capacity type (spot/on-demand)
+    type: string
+
+metrics:
+  karpenter_nodes_total:
+    enabled: true
+    description: Total number of nodes managed by Karpenter
+    unit: "1"
+    gauge:
+      value_type: int
+    attributes: [node_pool, instance_type, zone, capacity_type]
+  
+  karpenter_pods_pending:
+    enabled: true
+    description: Number of pending pods waiting for resources
+    unit: "1"
+    gauge:
+      value_type: int
+    attributes: []
+  
+  karpenter_node_utilization:
+    enabled: true
+    description: Node resource utilization percentage
+    unit: "%"
+    gauge:
+      value_type: double
+    attributes: [node_name, node_pool]

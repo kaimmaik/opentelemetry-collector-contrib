@@ -3,81 +3,96 @@ package kedareceiver
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
+	"github.com/prometheus/common/expfmt"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/receiver"
-	"go.uber.org/zap"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.uber.org/zap"
 )
 
 type kedaReceiver struct {
-	cfg          *Config
-	consumer     consumer.Metrics
-	logger       *zap.Logger
-	cancel       context.CancelFunc
-	client       v1.API
+	cfg      *Config
+	consumer consumer.Metrics
+	logger   *zap.Logger
+	ticker   *time.Ticker
+	stopCh   chan struct{}
 }
 
-func newKedaReceiver(set receiver.Settings, cfg *Config, nextConsumer consumer.Metrics) (receiver.Metrics, error) {
-	client, err := api.NewClient(api.Config{
-		Address: cfg.Endpoint,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Prometheus client: %w", err)
-	}
-
+func newKedaReceiver(cfg *Config, consumer consumer.Metrics, logger *zap.Logger) *kedaReceiver {
 	return &kedaReceiver{
 		cfg:      cfg,
-		consumer: nextConsumer,
-		logger:   set.Logger,
-		client:   v1.NewAPI(client),
-	}, nil
+		consumer: consumer,
+		logger:   logger,
+		ticker:   time.NewTicker(cfg.ScrapeInterval),
+		stopCh:   make(chan struct{}),
+	}
 }
 
 func (r *kedaReceiver) Start(ctx context.Context, host component.Host) error {
-	ctx, r.cancel = context.WithCancel(ctx)
-	
 	go r.scrapeLoop(ctx)
-	
-	return nil
-}
-
-func (r *kedaReceiver) Shutdown(ctx context.Context) error {
-	if r.cancel != nil {
-		r.cancel()
-	}
+	r.logger.Info("KEDA receiver started")
 	return nil
 }
 
 func (r *kedaReceiver) scrapeLoop(ctx context.Context) {
-	ticker := time.NewTicker(r.cfg.ScrapeInterval)
-	defer ticker.Stop()
-
 	for {
 		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			if err := r.scrapeMetrics(ctx); err != nil {
-				r.logger.Error("Failed to scrape KEDA metrics", zap.Error(err))
+		case <-r.ticker.C:
+			if err := r.scrapeAndSend(ctx); err != nil {
+				r.logger.Error("Error scraping KEDA metrics", zap.Error(err))
 			}
+		case <-r.stopCh:
+			return
 		}
 	}
 }
 
-func (r *kedaReceiver) scrapeMetrics(ctx context.Context) error {
-	// Simple HTTP GET to scrape metrics
-	resp, err := http.Get(r.cfg.Endpoint)
+func (r *kedaReceiver) scrapeAndSend(ctx context.Context) error {
+	url := fmt.Sprintf("http://%s/metrics", r.cfg.Endpoint)
+	resp, err := http.Get(url)
 	if err != nil {
-		return fmt.Errorf("failed to scrape KEDA metrics: %w", err)
+		return err
 	}
 	defer resp.Body.Close()
 
-	// Create empty metrics for now - in a real implementation you would parse the response
-	metrics := pmetric.NewMetrics()
-	
-	return r.consumer.ConsumeMetrics(ctx, metrics)
+	parser := expfmt.TextParser{}
+	families, err := parser.TextToMetricFamilies(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	md := pmetric.NewMetrics()
+	rm := md.ResourceMetrics().AppendEmpty()
+	sm := rm.ScopeMetrics().AppendEmpty()
+	sm.Scope().SetName("keda")
+
+	now := pmetric.NewTimestampFromTime(time.Now())
+	for name, mf := range families {
+		for _, m := range mf.Metric {
+			metric := sm.Metrics().AppendEmpty()
+			metric.SetName(name)
+			metric.SetDataType(pmetric.MetricTypeGauge)
+			dp := metric.Gauge().DataPoints().AppendEmpty()
+			dp.SetTimestamp(now)
+			if m.Gauge != nil {
+				dp.SetDoubleValue(m.Gauge.GetValue())
+			}
+			for _, l := range m.Label {
+				dp.Attributes().PutStr(l.GetName(), l.GetValue())
+			}
+		}
+	}
+
+	return r.consumer.ConsumeMetrics(ctx, md)
+}
+
+func (r *kedaReceiver) Shutdown(context.Context) error {
+	r.ticker.Stop()
+	close(r.stopCh)
+	r.logger.Info("KEDA receiver stopped")
+	return nil
 }
